@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Typing Test Screen -->
+        <div id="test-screen" class="screen active">
+            <div id="timer">30</div>
+            <div id="word-display"></div>
+            <button id="restart-btn">Restart</button>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen hidden">
+            <h2>Test Complete</h2>
+            <div class="stats">
+                <div>WPM: <span id="wpm-result">0</span></div>
+                <div>Accuracy: <span id="acc-result">0</span>%</div>
+            </div>
+            <div class="save-form">
+                <input type="text" id="name-input" placeholder="Enter your name" maxlength="15">
+                <button id="save-score-btn">Save Score</button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="leaderboard-screen" class="screen hidden">
+            <h2>Leaderboard</h2>
+            <ul id="leaderboard-list"></ul>
+            <button id="play-again-btn">Play Again</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

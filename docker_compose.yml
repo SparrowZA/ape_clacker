@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  monkeytype-clone:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    # Name the container for easy identification
+    container_name: ape_clacker
+    ports:
+      # Map port 8080 on your host machine to port 80 in the Nginx container
+      - "8080:80"
+    # Restart policy ensures the app comes back up if the server reboots
+    restart: unless-stopped
