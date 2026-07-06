@@ -7,7 +7,7 @@ services:
     # Name the container for easy identification
     container_name: ape_clacker
     ports:
-      # Map port 8080 on your host machine to port 80 in the Nginx container
-      - "8080:80"
+      # Map port 8888 on your host machine to port 80 in the Nginx container
+      - "8888:80"
     # Restart policy ensures the app comes back up if the server reboots
     restart: unless-stopped
