@@ -2,7 +2,7 @@
 FROM nginx:alpine
 
 # Copy our index.html file into the default Nginx public HTML directory
-COPY index.html /usr/share/nginx/html/index.html
+COPY index.html /usr/share/nginx/html/
 
 # Expose port 80 to tell Docker that the container listens on this port
 EXPOSE 80

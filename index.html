@@ -4,22 +4,110 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Typing Clone</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-color: #323437;
+            --main-color: #e2b714;
+            --text-color: #d1d0c5;
+            --sub-color: #646669;
+            --error-color: #ca4754;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #app {
+            width: 80%;
+            max-width: 800px;
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; text-align: center; }
+
+        #word-display {
+            font-size: 1.5rem;
+            line-height: 1.5;
+            text-align: left;
+            margin: 2rem 0;
+            color: var(--sub-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .word { display: flex; }
+        .letter.correct { color: var(--text-color); }
+        .letter.incorrect { color: var(--error-color); }
+        .letter.active { border-left: 2px solid var(--main-color); animation: blink 1s infinite; }
+
+        @keyframes blink { 50% { border-color: transparent; } }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            font-size: 1.2rem;
+            margin: 1rem 0;
+        }
+
+        button, input {
+            background: transparent;
+            color: var(--sub-color);
+            border: 2px solid var(--sub-color);
+            padding: 10px 20px;
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+        
+        button:hover, input:focus {
+            color: var(--text-color);
+            border-color: var(--text-color);
+            outline: none;
+        }
+
+        #leaderboard-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            max-width: 300px;
+            margin: 1rem auto;
+        }
+
+        #leaderboard-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--sub-color);
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
         <!-- Typing Test Screen -->
         <div id="test-screen" class="screen active">
-            <div id="timer">30</div>
+            <div id="timer" style="font-size: 2rem; color: var(--main-color);">30</div>
             <div id="word-display"></div>
-            <button id="restart-btn">Restart</button>
+            <button id="restart-btn">Restart Test</button>
+            <button id="view-leaderboard-btn">Leaderboard</button>
         </div>
 
         <!-- Results Screen -->
         <div id="results-screen" class="screen hidden">
             <h2>Test Complete</h2>
             <div class="stats">
-                <div>WPM: <span id="wpm-result">0</span></div>
+                <div>Net WPM: <span id="wpm-result" style="color: var(--main-color); font-weight: bold;">0</span></div>
+                <div>Raw WPM: <span id="raw-wpm-result">0</span></div>
                 <div>Accuracy: <span id="acc-result">0</span>%</div>
             </div>
             <div class="save-form">
@@ -30,11 +118,174 @@
 
         <!-- Leaderboard Screen -->
         <div id="leaderboard-screen" class="screen hidden">
-            <h2>Leaderboard</h2>
+            <h2>Local Leaderboard</h2>
             <ul id="leaderboard-list"></ul>
             <button id="play-again-btn">Play Again</button>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        const words = ["the", "be", "of", "and", "a", "to", "in", "he", "have", "it", "that", "for", "they", "I", "with", "as", "not", "on", "she", "at", "by", "this", "we", "you", "do", "but", "from", "or", "which", "one", "would", "all", "will", "there", "say", "who", "make", "when", "can", "more", "if", "no", "man", "out", "other", "so", "what", "time", "up", "go", "about", "than", "into", "could", "state", "only", "new", "year", "some", "take"];
+
+        const TEST_TIME = 30; // 30 seconds
+        let timeRemaining = TEST_TIME;
+        let timer = null;
+        let isTyping = false;
+        let totalKeystrokes = 0;
+        let correctKeystrokes = 0;
+
+        const testScreen = document.getElementById('test-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        const leaderboardScreen = document.getElementById('leaderboard-screen');
+        const wordDisplay = document.getElementById('word-display');
+        const timerDisplay = document.getElementById('timer');
+
+        function initTest() {
+            clearInterval(timer);
+            timeRemaining = TEST_TIME;
+            timerDisplay.innerText = timeRemaining;
+            isTyping = false;
+            totalKeystrokes = 0;
+            correctKeystrokes = 0;
+            
+            wordDisplay.innerHTML = '';
+            for (let i = 0; i < 50; i++) {
+                const wordStr = words[Math.floor(Math.random() * words.length)] + " ";
+                const wordEl = document.createElement('div');
+                wordEl.className = 'word';
+                
+                wordStr.split('').forEach(char => {
+                    const letterEl = document.createElement('span');
+                    letterEl.className = 'letter';
+                    letterEl.innerText = char;
+                    wordEl.appendChild(letterEl);
+                });
+                wordDisplay.appendChild(wordEl);
+            }
+            
+            wordDisplay.querySelector('.letter').classList.add('active');
+            showScreen('test-screen');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (testScreen.classList.contains('hidden')) return;
+
+            const activeLetter = document.querySelector('.letter.active');
+            if (!activeLetter) return;
+
+            // Handle Backspace Correction
+            if (e.key === 'Backspace') {
+                let prevLetter = activeLetter.previousSibling;
+                if (!prevLetter && activeLetter.parentElement.previousSibling) {
+                    prevLetter = activeLetter.parentElement.previousSibling.lastChild;
+                }
+
+                if (prevLetter) {
+                    activeLetter.classList.remove('active');
+                    prevLetter.classList.add('active');
+
+                    if (prevLetter.classList.contains('correct')) {
+                        correctKeystrokes--;
+                    }
+                    prevLetter.classList.remove('correct', 'incorrect');
+                }
+                return; 
+            }
+
+            if (e.key.length !== 1) return;
+
+            if (!isTyping) {
+                isTyping = true;
+                timer = setInterval(updateTimer, 1000);
+            }
+
+            totalKeystrokes++;
+            const expectedChar = activeLetter.innerText;
+
+            if (e.key === expectedChar) {
+                activeLetter.classList.add('correct');
+                correctKeystrokes++;
+            } else {
+                activeLetter.classList.add('incorrect');
+            }
+
+            activeLetter.classList.remove('active');
+            const nextLetter = activeLetter.nextSibling || activeLetter.parentElement.nextSibling?.firstChild;
+            
+            if (nextLetter) {
+                nextLetter.classList.add('active');
+            } else {
+                endTest(); 
+            }
+        });
+
+        function updateTimer() {
+            timeRemaining--;
+            timerDisplay.innerText = timeRemaining;
+            if (timeRemaining <= 0) endTest();
+        }
+
+        function endTest() {
+            clearInterval(timer);
+            
+            const timeInMinutes = TEST_TIME / 60;
+            
+            let rawWpm = Math.round((totalKeystrokes / 5) / timeInMinutes);
+            let netWpm = Math.round((correctKeystrokes / 5) / timeInMinutes);
+            let accuracy = Math.round((correctKeystrokes / totalKeystrokes) * 100);
+
+            if (totalKeystrokes === 0) {
+                rawWpm = 0; netWpm = 0; accuracy = 0;
+            }
+
+            document.getElementById('raw-wpm-result').innerText = rawWpm;
+            document.getElementById('wpm-result').innerText = netWpm;
+            document.getElementById('acc-result').innerText = accuracy;
+            
+            showScreen('results-screen');
+        }
+
+        document.getElementById('save-score-btn').addEventListener('click', () => {
+            const name = document.getElementById('name-input').value || 'Anonymous';
+            const wpm = parseInt(document.getElementById('wpm-result').innerText);
+            const accuracy = parseInt(document.getElementById('acc-result').innerText);
+            
+            const scores = JSON.parse(localStorage.getItem('typingScores')) || [];
+            scores.push({ name, wpm, accuracy, date: new Date().toLocaleDateString() });
+            scores.sort((a, b) => b.wpm - a.wpm); // Sort descending
+            localStorage.setItem('typingScores', JSON.stringify(scores.slice(0, 10))); // Keep top 10
+            
+            renderLeaderboard();
+        });
+
+        function renderLeaderboard() {
+            const scores = JSON.parse(localStorage.getItem('typingScores')) || [];
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '';
+            
+            scores.forEach((score, index) => {
+                const li = document.createElement('li');
+                // Added the accuracy field here. 
+                // The || 0 handles older scores saved before we tracked accuracy!
+                li.innerText = `${index + 1}. ${score.name} - ${score.wpm} WPM | ${score.accuracy || 0}% Acc`;
+                list.appendChild(li);
+            });
+            
+            showScreen('leaderboard-screen');
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active', 'hidden'));
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        document.getElementById('restart-btn').addEventListener('click', initTest);
+        document.getElementById('play-again-btn').addEventListener('click', initTest);
+        document.getElementById('view-leaderboard-btn').addEventListener('click', renderLeaderboard);
+
+        initTest();
+    </script>
 </body>
 </html>
